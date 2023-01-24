@@ -59,40 +59,49 @@ app.get('/api/v1/getusers', async (req: Request, res: Response) => {
 });
 
 app.post('/api/v1/songs', async (req: Request, res: Response) => {
-    const songs = await prisma.song.findMany();
-    res.json(songs);
-});
+    const { name, artist, album, year, genre, duration,playlists,privacysong } = req.body
+    const song = await prisma.song.create({
+        data: {
+            name,
+            artist,
+            album,
+            year,
+            genre,
+            duration,
+            privacysong,
+            playlists: {}
+          
+        }
+    })
+    res.json(song)
+  })
 
-app.get("/api/v1/getsongs", async (req, res) => {
-    try {
-        const songs = await prisma.song.findMany();
+app.get("/api/v1/getsongs", async (req: Request, res: Response) => {
+    const util = require('util');
+    const verify = util.promisify(jwt.verify);
 
-        const songsWithPlaylist = await Promise.all(songs.map(async (song:any) => {
-            const playlists = await prisma.playlist.findMany({
-                where: {
-                    songs: {
-                        some: {
-                            id:song.id
-                        }
-                    }
-                },
-                select: {
-                    name: true
-                }
-            });
-            return {
-                ...song,
-                playlists
-            }
-        }))
-        res.json({ songsWithPlaylist });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener las canciones',
-
-        });
+    async function validarToken(req: Request, res: Response) {
+    const { authorization } = req.headers;
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+    return false;
     }
+
+    const token = authorization.replace("Bearer ", "");
+    try {
+    await verify(token, 'secretKey');
+    return true;
+    } catch (err) {
+    return false;
+    }
+}
+    const isTokenValid = await validarToken(req, res);
+    let songs;
+    if (!isTokenValid) {
+        songs = await prisma.song.findMany({ where: { privacysong: false } });
+    } else {
+        songs = await prisma.song.findMany();
+    }
+    res.json(songs);
 });
 
 app.listen(port, () => {
