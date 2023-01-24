@@ -200,6 +200,43 @@ try {
 }
 });
 
+app.post('/api/v1/login', async (req: Request, res: Response) => {
+    try {
+    const user = req.body as { email: string, password: string};
+    const email = user.email;
+    const password = user.password;
+
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            email: email
+        }
+    });
+
+    if(!existingUser) {
+        return res.status(404).json({error: 'Usuario no encontrado.'});
+    }
+
+    const isMatch = await bcrypt.compare(password, existingUser.password);
+
+    if(!isMatch) {
+        return res.status(401).json({error: 'Contraseña incorrecta'});
+    }
+
+    const token = jwt.sign({id: existingUser.id}, 'secretKey');
+
+    res.status(200).json({
+        ok: true,
+        result: { token },
+    });
+    } catch (error) {
+    res.status(500).json({
+        ok: false,
+        message: error,
+    });
+    console.log(error);
+    }
+});
+
 
 app.listen(port, () => {
     console.log(`El servidor se ejecuta en http://localhost:${port}`);
