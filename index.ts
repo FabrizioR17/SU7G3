@@ -104,6 +104,55 @@ app.get("/api/v1/getsongs", async (req: Request, res: Response) => {
     res.json(songs);
 });
 
+app.get("/api/v1/getsongs/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const songs = await prisma.song.findMany({ where: { id: Number(id) } });
+        const song = songs[0];
+        if (!song) {
+            return res.status(404).json({ error: 'song not found' });
+        }
+        const playlists = await prisma.playlist.findMany({
+            where: {
+                songs: {
+                    some: {
+                        id: Number(id)
+                    }
+                }
+            }
+        });
+        res.json({ song, playlists });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener la cancion',
+
+        });
+    }
+});
+
+app.post("/api/v1/playlists", async (req, res) => {
+    try {
+        const newPlaylist = await prisma.playlist.create({
+            data: {
+                name: req.body.name,
+                user_id: req.body.user_id,
+                songs: {
+                    connect: req.body.songs.map((song: any) => ({ id: song.id }))
+                }
+            }
+        });
+        res.json(newPlaylist);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener las playlist',
+
+        });
+    }
+});
+
+
 app.listen(port, () => {
     console.log(`El servidor se ejecuta en http://localhost:${port}`);
   });
