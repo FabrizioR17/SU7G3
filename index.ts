@@ -152,6 +152,54 @@ app.post("/api/v1/playlists", async (req, res) => {
     }
 });
 
+app.get("/api/v1/getplaylists", async (req, res) => {
+    try {
+      const playlists = await prisma.playlist.findMany({
+        include: { songs: true }
+      });
+      res.json(playlists);
+    } catch (error) {
+      res.status(500).json({
+          success: false,
+          message: 'Error al obtener las playlists',
+          
+      });
+    }
+});
+
+
+
+app.post("/api/v1/playlists/addsong", async (req, res) => {
+const { id_song, id_playlist } = req.body;
+try {
+    const songs = await prisma.song.findMany({ where: { id: id_song } });
+    const song = songs[0];
+    const playlists = await prisma.playlist.findMany({ where: { id: id_playlist } });
+    const playlist = playlists[0];
+    if (!song) {
+        return res.status(404).json({ error: 'song not found' });
+    }
+    if (!playlist) {
+        return res.status(404).json({ error: 'playlist not found' });
+    }
+    await prisma.playlist.update({
+        where: { id: id_playlist },
+        data: {
+            songs: {
+                connect: { id: id_song }
+            }
+        }
+    });
+    res.json({ message: "song added successfully to the playlist" });
+} catch (error) {
+    res.status(500).json({
+        success: false,
+        message: 'Error al añadir la cancion',
+        
+    });
+}
+});
+
 
 app.listen(port, () => {
     console.log(`El servidor se ejecuta en http://localhost:${port}`);
