@@ -58,6 +58,51 @@ app.get('/api/v1/getusers', async (req: Request, res: Response) => {
     res.json(users);
 });
 
+app.post('/api/v1/songs', async (req: Request, res: Response) => {
+    const { name, artist, album, year, genre, duration,playlists,privacysong } = req.body
+    const song = await prisma.song.create({
+        data: {
+            name,
+            artist,
+            album,
+            year,
+            genre,
+            duration,
+            privacysong,
+            playlists: {}
+          
+        }
+    })
+    res.json(song)
+  })
+
+app.get("/api/v1/getsongs", async (req: Request, res: Response) => {
+    const util = require('util');
+    const verify = util.promisify(jwt.verify);
+
+    async function validarToken(req: Request, res: Response) {
+    const { authorization } = req.headers;
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+    return false;
+    }
+
+    const token = authorization.replace("Bearer ", "");
+    try {
+    await verify(token, 'secretKey');
+    return true;
+    } catch (err) {
+    return false;
+    }
+}
+    const isTokenValid = await validarToken(req, res);
+    let songs;
+    if (!isTokenValid) {
+        songs = await prisma.song.findMany({ where: { privacysong: false } });
+    } else {
+        songs = await prisma.song.findMany();
+    }
+    res.json(songs);
+});
 
 app.listen(port, () => {
     console.log(`El servidor se ejecuta en http://localhost:${port}`);
