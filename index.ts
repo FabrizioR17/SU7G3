@@ -23,6 +23,7 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Hola, Welcome')
 });
 
+
 app.post('/api/v1/users', async (req: Request, res: Response) => {
     const user = req.body as { name: string, email: string, password: string, date_born: string };
     const password = user.password;
